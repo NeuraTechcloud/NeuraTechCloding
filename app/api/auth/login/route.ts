@@ -3,28 +3,49 @@ import { authenticateUser } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    const { email, password } = body
+
+    console.log("🔐 Login attempt:", { email })
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Email e senha são obrigatórios",
+        },
+        { status: 400 },
+      )
     }
 
-    const user = await authenticateUser({ email, password })
+    const user = await authenticateUser(email, password)
 
     if (!user) {
-      return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Credenciais inválidas",
+        },
+        { status: 401 },
+      )
     }
 
+    // Não retornar a senha hash
+    const { password_hash, ...userWithoutPassword } = user
+
+    console.log("✅ Login successful for:", email)
     return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        userType: user.userType.toLowerCase(),
-      },
+      success: true,
+      user: userWithoutPassword,
     })
   } catch (error) {
-    console.error("Login error:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    console.error("❌ Login error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erro interno do servidor",
+      },
+      { status: 500 },
+    )
   }
 }

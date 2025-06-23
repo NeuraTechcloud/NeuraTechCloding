@@ -4,16 +4,12 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start"
   },
   "dependencies": {
-    "@prisma/client": "latest",
+    "@neondatabase/serverless": "latest",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-label": "^2.0.2",
@@ -33,6 +29,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/leaflet": "^1.9.8",
     "@types/node": "^22",
     "@types/react": "^18",
@@ -41,9 +38,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
     "postcss": "^8.5",
-    "prisma": "^5.7.1",
     "tailwindcss": "^3.3.0",
-    "tsx": "^4.6.2",
     "typescript": "^5"
   }
 }

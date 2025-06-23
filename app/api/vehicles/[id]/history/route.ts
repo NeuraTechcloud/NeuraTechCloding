@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getVehicleHistory } from "@/lib/vehicles"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -7,7 +6,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const days = Number.parseInt(searchParams.get("days") || "7")
     const vehicleId = params.id
 
-    const history = await getVehicleHistory(vehicleId, days)
+    // Gera histórico de demonstração
+    const history = Array.from({ length: 20 }, (_, i) => ({
+      lat: -22.9083 + (Math.random() - 0.5) * 0.01,
+      lng: -43.1964 + (Math.random() - 0.5) * 0.01,
+      speed: Math.random() * 100,
+      timestamp: new Date(Date.now() - i * 60 * 60 * 1000).toISOString(),
+      address: `Localização histórica ${i + 1}`,
+    }))
+
     return NextResponse.json({ history })
   } catch (error) {
     console.error("Error fetching vehicle history:", error)

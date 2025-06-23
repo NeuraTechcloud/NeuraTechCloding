@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { Menu, Settings, LogOut, Plus, Clock, FileText, Bell, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -21,7 +20,6 @@ interface Vehicle {
   lng: number
   address: string
   lastUpdate: string
-  history: Record<string, [number, number][]>
 }
 
 interface DashboardProps {
@@ -41,7 +39,6 @@ const guestVehicles: Vehicle[] = [
     lng: -43.1964,
     address: "Av. Pres. Vargas, Rio de Janeiro - RJ",
     lastUpdate: "Agora",
-    history: {},
   },
   {
     id: 2,
@@ -54,7 +51,6 @@ const guestVehicles: Vehicle[] = [
     lng: -46.6333,
     address: "Av. Paulista, São Paulo - SP",
     lastUpdate: "Há 5 min",
-    history: {},
   },
   {
     id: 3,
@@ -67,49 +63,6 @@ const guestVehicles: Vehicle[] = [
     lng: -47.8825,
     address: "Eixo Monumental, Brasília - DF",
     lastUpdate: "Há 2 horas",
-    history: {},
-  },
-]
-
-const clientVehicles: Vehicle[] = [
-  {
-    id: 10,
-    name: "Fiat Strada",
-    plate: "RIO2A18",
-    imei: "358723000000010",
-    status: "online",
-    speed: 88,
-    lat: -22.4841,
-    lng: -42.9645,
-    address: "BR-101, Itaboraí - RJ",
-    lastUpdate: "Agora",
-    history: {},
-  },
-  {
-    id: 11,
-    name: "Honda Civic",
-    plate: "SAO4B22",
-    imei: "358723000000011",
-    status: "stopped",
-    speed: 45,
-    lat: -22.9774,
-    lng: -43.2039,
-    address: "R. Jardim Botânico, Rio de Janeiro - RJ",
-    lastUpdate: "Agora",
-    history: {},
-  },
-  {
-    id: 12,
-    name: "VW Nivus",
-    plate: "BHZ7C33",
-    imei: "358723000000012",
-    status: "offline",
-    speed: 0,
-    lat: -19.9167,
-    lng: -43.9345,
-    address: "Praça da Liberdade, Belo Horizonte - MG",
-    lastUpdate: "Há 15 min",
-    history: {},
   },
 ]
 
@@ -131,17 +84,22 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
 
       try {
         const user = JSON.parse(localStorage.getItem("user") || "{}")
-        if (!user.id) return
+        if (!user.id) {
+          setVehicles([...guestVehicles])
+          return
+        }
 
         const response = await fetch(`/api/vehicles?userId=${user.id}`)
         const data = await response.json()
 
-        if (response.ok) {
+        if (response.ok && data.vehicles) {
           setVehicles(data.vehicles)
+        } else {
+          setVehicles([...guestVehicles])
         }
       } catch (error) {
         console.error("Erro ao carregar veículos:", error)
-        setVehicles([...clientVehicles]) // Fallback para dados mock
+        setVehicles([...guestVehicles])
       }
     }
 
@@ -187,7 +145,7 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
     }
   }
 
-  const handleAddVehicle = async () => {
+  const handleAddVehicle = () => {
     if (userType === "guest") return
 
     const addVehicleForm = (
@@ -213,57 +171,23 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
 
             if (response.ok) {
               const data = await response.json()
-              setVehicles((prev) => [
-                ...prev,
-                {
-                  id: data.vehicle.id,
-                  name: data.vehicle.name,
-                  plate: data.vehicle.plate,
-                  imei: data.vehicle.imei,
-                  status: "offline" as const,
-                  speed: 0,
-                  lat: -14.235004 + (Math.random() - 0.5) * 20,
-                  lng: -51.92528 + (Math.random() - 0.5) * 20,
-                  address: "Localização sendo adquirida...",
-                  lastUpdate: "Agora",
-                  history: {},
-                },
-              ])
-              setModalContent(null)
-
-              setTimeout(() => {
-                setModalContent(
-                  <div className="text-center">
-                    <div className="w-12 h-12 text-green-500 mx-auto mb-4">✓</div>
-                    <h3 className="text-xl font-bold text-white mb-2">Sucesso!</h3>
-                    <p className="text-gray-300 mb-6">Veículo "{data.vehicle.name}" cadastrado na plataforma.</p>
-                    <Button
-                      onClick={() => setModalContent(null)}
-                      className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
-                    >
-                      OK
-                    </Button>
-                  </div>,
-                )
-              }, 400)
-            } else {
-              const errorData = await response.json()
-              throw new Error(errorData.error)
+              setVehicles((prev) => [...prev, data.vehicle])
+              setModalContent(
+                <div className="text-center">
+                  <div className="text-green-500 text-4xl mb-4">✓</div>
+                  <h3 className="text-xl font-bold text-white mb-2">Sucesso!</h3>
+                  <p className="text-gray-300 mb-6">Veículo cadastrado com sucesso!</p>
+                  <Button
+                    onClick={() => setModalContent(null)}
+                    className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
+                  >
+                    OK
+                  </Button>
+                </div>,
+              )
             }
           } catch (error) {
-            console.error("Erro ao criar veículo:", error)
-            setModalContent(
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-red-500 mb-2">Erro</h3>
-                <p className="text-gray-300 mb-6">Erro ao cadastrar veículo. Tente novamente.</p>
-                <Button
-                  onClick={() => setModalContent(null)}
-                  className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
-                >
-                  OK
-                </Button>
-              </div>,
-            )
+            console.error("Erro:", error)
           }
         }}
       >
@@ -289,7 +213,6 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
             <label className="block text-sm font-medium text-gray-300 mb-1">IMEI do Dispositivo</label>
             <Input
               name="imei"
-              type="number"
               required
               className="bg-gray-700 border-gray-600 focus:ring-amber-500 focus:border-amber-500"
             />
@@ -315,65 +238,22 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
   }
 
   const handleToolClick = (tool: string) => {
-    if (tool === "history") {
-      const historyModal = (
-        <div>
-          <h3 className="text-xl font-bold text-amber-500 mb-4">Consultar Histórico</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Selecione o Veículo</label>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Selecione o Período</label>
-              <div className="grid grid-cols-3 gap-2">
-                <Button variant="outline" className="bg-gray-700 hover:bg-amber-700">
-                  Hoje
-                </Button>
-                <Button variant="outline" className="bg-gray-700 hover:bg-amber-700">
-                  7 dias
-                </Button>
-                <Button variant="outline" className="bg-gray-700 hover:bg-amber-700">
-                  15 dias
-                </Button>
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-between items-center">
-            <Button variant="ghost" className="text-gray-400 hover:text-white">
-              Limpar Rota
-            </Button>
-            <Button
-              onClick={() => setModalContent(null)}
-              className="bg-amber-500 text-black font-bold hover:bg-amber-600"
-            >
-              Fechar
-            </Button>
-          </div>
-        </div>
-      )
-      setModalContent(historyModal)
-    } else {
-      const toolNames = {
-        reports: "Relatórios",
-        alerts: "Alertas",
-        fences: "Cercas",
-      }
-
-      setModalContent(
-        <div>
-          <h3 className="text-xl font-bold text-amber-500 mb-2">{toolNames[tool as keyof typeof toolNames]}</h3>
-          <p className="text-gray-300 mb-6">
-            Esta funcionalidade está em desenvolvimento e estará disponível em breve.
-          </p>
-          <Button
-            onClick={() => setModalContent(null)}
-            className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
-          >
-            Entendi
-          </Button>
-        </div>,
-      )
+    const toolNames = {
+      history: "Histórico",
+      reports: "Relatórios",
+      alerts: "Alertas",
+      fences: "Cercas",
     }
+
+    setModalContent(
+      <div>
+        <h3 className="text-xl font-bold text-amber-500 mb-2">{toolNames[tool as keyof typeof toolNames]}</h3>
+        <p className="text-gray-300 mb-6">Esta funcionalidade estará disponível em breve.</p>
+        <Button onClick={() => setModalContent(null)} className="bg-amber-500 hover:bg-amber-600 text-black font-bold">
+          Entendi
+        </Button>
+      </div>,
+    )
   }
 
   const getStatusColor = (status: string) => {
@@ -391,7 +271,8 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
     <div className="h-screen w-screen bg-black flex">
       {/* Sidebar */}
       <aside
-        className={`absolute lg:static z-30 w-full max-w-xs xl:max-w-sm h-full bg-gray-900 border-r border-gray-800 shadow-lg flex flex-col transform ${panelOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 transition-transform duration-300 ease-in-out`}
+        className={`absolute lg:static w-full max-w-xs xl:max-w-sm h-full bg-gray-900 border-r border-gray-800 shadow-lg flex flex-col transform ${panelOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 transition-transform duration-300 ease-in-out`}
+        style={{ zIndex: 500 }}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div>
@@ -519,46 +400,42 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
         {/* Mobile Menu Button */}
         <Button
           onClick={() => setPanelOpen(!panelOpen)}
-          className="lg:hidden absolute top-4 left-4 z-20 p-2 bg-gray-900/70 text-white backdrop-blur-sm"
+          className="lg:hidden absolute top-4 left-4 p-2 bg-gray-900/70 text-white backdrop-blur-sm"
+          style={{ zIndex: 600 }}
         >
           <Menu className="h-6 w-6" />
         </Button>
 
         {/* Map Controls */}
-        <div className="absolute top-4 right-4 z-20">
+        <div className="absolute top-4 right-4 map-controls">
           <select
             value={mapLayer}
             onChange={(e) => setMapLayer(e.target.value)}
             className="bg-gray-800 border border-gray-600 text-white focus:ring-amber-500 focus:border-amber-500 text-sm rounded-md p-2 min-w-[200px]"
-            style={{
-              backgroundColor: "#1f2937",
-              color: "white",
-              border: "1px solid #4b5563",
-            }}
           >
-            <option value="osm_dark" style={{ backgroundColor: "#1f2937", color: "white" }}>
-              OpenStreetMap (Escuro)
-            </option>
-            <option value="osm_light" style={{ backgroundColor: "#1f2937", color: "white" }}>
-              OpenStreetMap (Claro)
-            </option>
-            <option value="google_roadmap" style={{ backgroundColor: "#1f2937", color: "white" }}>
-              Google Maps
-            </option>
-            <option value="google_satellite" style={{ backgroundColor: "#1f2937", color: "white" }}>
-              Google Satélite
-            </option>
+            <option value="osm_dark">OpenStreetMap (Escuro)</option>
+            <option value="osm_light">OpenStreetMap (Claro)</option>
+            <option value="google_roadmap">Google Maps</option>
+            <option value="google_satellite">Google Satélite</option>
           </select>
         </div>
       </main>
 
       {/* Mobile Overlay */}
       {panelOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20" onClick={() => setPanelOpen(false)} />
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50"
+          onClick={() => setPanelOpen(false)}
+          style={{ zIndex: 400 }}
+        />
       )}
 
       {/* Modal */}
-      {modalContent && <Modal onClose={() => setModalContent(null)}>{modalContent}</Modal>}
+      {modalContent && (
+        <div className="modal-overlay">
+          <Modal onClose={() => setModalContent(null)}>{modalContent}</Modal>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,7 +8,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
@@ -26,43 +25,28 @@ body {
   background: #f59e0b;
 }
 
-/* Leaflet map styles */
 .leaflet-container {
   height: 100% !important;
   width: 100% !important;
-  z-index: 10;
   background: #1f2937 !important;
+  z-index: 1 !important;
 }
 
-/* Fix Leaflet popup styles for dark theme */
 .leaflet-popup-content-wrapper {
-  background: #1f2937 !important;
-  color: white !important;
+  background: white !important;
+  color: black !important;
   border-radius: 8px !important;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
 .leaflet-popup-tip {
-  background: #1f2937 !important;
+  background: white !important;
 }
 
-.leaflet-popup-close-button {
-  color: white !important;
-  font-size: 18px !important;
-  padding: 4px 8px !important;
-}
-
-.leaflet-popup-close-button:hover {
-  color: #f59e0b !important;
-}
-
-/* Vehicle marker styles */
-.vehicle-marker-icon {
+.custom-marker {
   background: transparent !important;
   border: none !important;
 }
 
-/* Fix for Leaflet controls in dark theme */
 .leaflet-control-zoom a {
   background-color: #374151 !important;
   border-color: #4b5563 !important;
@@ -74,54 +58,45 @@ body {
   color: #f59e0b !important;
 }
 
-.leaflet-control-attribution {
-  background-color: rgba(31, 41, 55, 0.8) !important;
-  color: #d1d5db !important;
-}
-
-.leaflet-control-attribution a {
-  color: #f59e0b !important;
-}
-
-/* Select dropdown dark theme fix */
 select option {
   background-color: #1f2937 !important;
   color: white !important;
 }
 
-select:focus option:checked,
-select:focus option:hover {
-  background-color: #f59e0b !important;
-  color: black !important;
+main {
+  height: 100vh;
+  width: 100%;
 }
 
-/* Loading state for map */
-.map-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  background: #1f2937;
-  color: white;
-  font-size: 18px;
+.flex-1 {
+  flex: 1;
+  min-height: 0;
 }
 
-.map-loading::after {
-  content: "";
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
-  border: 2px solid #f59e0b;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+/* Modal z-index fix */
+.modal-overlay {
+  z-index: 9999 !important;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.modal-content {
+  z-index: 10000 !important;
+}
+
+/* Leaflet controls z-index */
+.leaflet-control-container {
+  z-index: 100 !important;
+}
+
+.leaflet-popup-pane {
+  z-index: 200 !important;
+}
+
+/* Ensure sidebar stays above map but below modals */
+aside {
+  z-index: 500 !important;
+}
+
+/* Map controls */
+.map-controls {
+  z-index: 600 !important;
 }

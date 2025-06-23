@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { updateVehicleLocation } from "@/lib/vehicles"
+import { sql } from "@/lib/db"
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -10,15 +10,19 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Latitude, longitude e velocidade são obrigatórios" }, { status: 400 })
     }
 
-    const vehicle = await updateVehicleLocation({
-      vehicleId,
-      lat,
-      lng,
-      speed,
-      address,
-    })
+    const vehicle = await sql`
+      UPDATE vehicles 
+      SET lat = ${lat}, lng = ${lng}, speed = ${speed}, address = ${address}, 
+          status = 'online', last_update = CURRENT_TIMESTAMP
+      WHERE id = ${vehicleId}
+      RETURNING *
+    `
 
-    return NextResponse.json({ vehicle })
+    if (vehicle.length === 0) {
+      return NextResponse.json({ error: "Veículo não encontrado" }, { status: 404 })
+    }
+
+    return NextResponse.json({ vehicle: vehicle[0] })
   } catch (error) {
     console.error("Error updating vehicle location:", error)
     return NextResponse.json({ error: "Erro ao atualizar localização" }, { status: 500 })
