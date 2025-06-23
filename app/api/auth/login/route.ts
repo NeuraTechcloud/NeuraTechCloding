@@ -1,13 +1,17 @@
-import { type NextRequest, NextResponse } from "next/server"
+iimport { type NextRequest, NextResponse } from "next/server"
 import { sql, isDatabaseAvailable } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import { sign } from "jsonwebtoken" // Usaremos JWT para criar um token
+
+// Chave secreta para assinar o token JWT. Em produção, use uma variável de ambiente!
+const JWT_SECRET = process.env.JWT_SECRET || "sua-chave-secreta-super-segura-em-producao"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { email, password } = body
 
-    console.log("🔐 Login attempt:", { email })
+    console.log("🔐 Tentativa de login para:", { email })
 
     if (!email || !password) {
       return NextResponse.json(
@@ -19,114 +23,72 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Usuário de fallback apenas para cliente teste
-    const fallbackUsers = [
-      {
-        id: 1,
-        email: "cliente@rastreramos.com",
-        password: "senha123",
-        name: "Cliente Demonstração",
-        user_type: "client",
-      },
-    ]
-
-    // Admin único - apenas no banco de dados
-    if (email === "admin@rastreramos.com") {
-      console.log("🔍 Admin login attempt - checking database only...")
-
-      const dbAvailable = await isDatabaseAvailable()
-      if (dbAvailable && sql) {
-        try {
-          const users = await sql`
-            SELECT * FROM users WHERE email = ${email} AND user_type = 'admin'
-          `
-
-          if (users.length > 0) {
-            const user = users[0]
-            const isValidPassword = await bcrypt.compare(password, user.password_hash)
-
-            if (isValidPassword) {
-              console.log("✅ Admin authentication successful")
-              const { password_hash, ...userWithoutPassword } = user
-              return NextResponse.json({
-                success: true,
-                user: userWithoutPassword,
-              })
-            } else {
-              console.log("❌ Invalid admin password")
-            }
-          } else {
-            console.log("❌ Admin user not found in database")
-          }
-        } catch (error) {
-          console.error("❌ Database error for admin:", error)
-        }
-      }
-
+    // A autenticação agora depende exclusivamente do banco de dados.
+    const dbAvailable = await isDatabaseAvailable()
+    if (!dbAvailable || !sql) {
       return NextResponse.json(
         {
           success: false,
-          error: "Credenciais de administrador inválidas",
+          error: "Serviço indisponível. Tente novamente mais tarde.",
         },
-        { status: 401 },
+        { status: 503 },
       )
     }
 
-    // Para outros usuários, verificar fallback primeiro
-    console.log("🔍 Checking fallback users...")
-    const fallbackUser = fallbackUsers.find((u) => u.email === email && u.password === password)
+    // Buscar o usuário no banco de dados
+    const users = await sql`SELECT * FROM users WHERE email = ${email}`
 
-    if (fallbackUser) {
-      console.log("✅ Fallback authentication successful:", fallbackUser.user_type)
-      const { password: _, ...userWithoutPassword } = fallbackUser
-      return NextResponse.json({
-        success: true,
-        user: userWithoutPassword,
-      })
+    if (users.length === 0) {
+      console.log("❌ Usuário não encontrado:", email)
+      return NextResponse.json({ success: false, error: "Email ou senha incorretos" }, { status: 401 })
     }
 
-    // Tentar banco de dados para outros usuários
-    const dbAvailable = await isDatabaseAvailable()
-    if (dbAvailable && sql) {
-      try {
-        console.log("🔍 Searching user in database...")
-        const users = await sql`
-          SELECT * FROM users WHERE email = ${email}
-        `
+    const user = users[0]
+    console.log("👤 Usuário encontrado no banco:", user.email, user.user_type)
 
-        if (users.length > 0) {
-          const user = users[0]
-          console.log("👤 User found in database:", user.email, user.user_type)
+    // Comparar a senha fornecida com o hash armazenado
+    const isValidPassword = await bcrypt.compare(password, user.password_hash)
 
-          const isValidPassword = await bcrypt.compare(password, user.password_hash)
-          if (isValidPassword) {
-            console.log("✅ Database authentication successful")
-            const { password_hash, ...userWithoutPassword } = user
-            return NextResponse.json({
-              success: true,
-              user: userWithoutPassword,
-            })
-          } else {
-            console.log("❌ Invalid password for database user")
-          }
-        } else {
-          console.log("❌ User not found in database")
-        }
-      } catch (error) {
-        console.error("❌ Database error:", error)
-      }
+    if (!isValidPassword) {
+      console.log("❌ Senha inválida para o usuário:", email)
+      return NextResponse.json({ success: false, error: "Email ou senha incorretos" }, { status: 401 })
     }
 
-    console.log("❌ Authentication failed for:", email)
-    return NextResponse.json(
+    // Se a senha estiver correta, a autenticação é bem-sucedida
+    console.log("✅ Autenticação bem-sucedida para:", email)
+
+    // Remover o hash da senha do objeto de usuário retornado
+    const { password_hash, ...userWithoutPassword } = user
+
+    // Criar um token de sessão (JWT)
+    const token = sign(
       {
-        success: false,
-        error: "Email ou senha incorretos",
+        userId: user.id,
+        userType: user.user_type,
+        email: user.email,
       },
-      { status: 401 },
+      JWT_SECRET,
+      { expiresIn: "1d" }, // Token expira em 1 dia
     )
+
+    // Retornar os dados do usuário e o token
+    const response = NextResponse.json({
+      success: true,
+      user: userWithoutPassword,
+    })
+
+    // Adicionar o token em um cookie HttpOnly, que é mais seguro que o localStorage
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 60 * 60 * 24, // 1 dia
+    })
+
+    return response
   } catch (error) {
-    console.error("❌ Login error:", error)
+    console.error("❌ Erro no processo de login:", error)
     return NextResponse.json(
       {
         success: false,
