@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #27272a;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #a16207;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
+}
+
+/* Leaflet map styles */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 10;
+}
+
+.dark-popup .leaflet-popup-content-wrapper {
+  background: #1f2937;
+  color: white;
+  border-radius: 8px;
+}
+
+.dark-popup .leaflet-popup-tip {
+  background: #1f2937;
+}
+
+/* Vehicle marker styles */
+.vehicle-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
