@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react"
 import { Menu, Settings, LogOut, Plus, Clock, FileText, Bell, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import MapComponent from "@/components/map-component"
 import Modal from "@/components/modal"
@@ -124,8 +123,29 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
   const simulationInterval = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    const initialVehicles = userType === "guest" ? [...guestVehicles] : [...clientVehicles]
-    setVehicles(initialVehicles)
+    const loadVehicles = async () => {
+      if (userType === "guest") {
+        setVehicles([...guestVehicles])
+        return
+      }
+
+      try {
+        const user = JSON.parse(localStorage.getItem("user") || "{}")
+        if (!user.id) return
+
+        const response = await fetch(`/api/vehicles?userId=${user.id}`)
+        const data = await response.json()
+
+        if (response.ok) {
+          setVehicles(data.vehicles)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar veículos:", error)
+        setVehicles([...clientVehicles]) // Fallback para dados mock
+      }
+    }
+
+    loadVehicles()
   }, [userType])
 
   useEffect(() => {
@@ -167,37 +187,75 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
     }
   }
 
-  const handleAddVehicle = () => {
+  const handleAddVehicle = async () => {
     if (userType === "guest") return
 
     const addVehicleForm = (
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault()
           const formData = new FormData(e.currentTarget)
-          const newVehicle: Vehicle = {
-            id: Date.now(),
-            name: formData.get("name") as string,
-            plate: (formData.get("plate") as string).toUpperCase(),
-            imei: formData.get("imei") as string,
-            status: "online",
-            speed: 0,
-            lat: -14.235004 + (Math.random() - 0.5) * 20,
-            lng: -51.92528 + (Math.random() - 0.5) * 20,
-            address: "Localização sendo adquirida...",
-            lastUpdate: "Agora",
-            history: {},
-          }
+          const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-          setVehicles((prev) => [...prev, newVehicle])
-          setModalContent(null)
+          try {
+            const response = await fetch("/api/vehicles", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                name: formData.get("name"),
+                plate: formData.get("plate"),
+                imei: formData.get("imei"),
+                userId: user.id,
+              }),
+            })
 
-          setTimeout(() => {
+            if (response.ok) {
+              const data = await response.json()
+              setVehicles((prev) => [
+                ...prev,
+                {
+                  id: data.vehicle.id,
+                  name: data.vehicle.name,
+                  plate: data.vehicle.plate,
+                  imei: data.vehicle.imei,
+                  status: "offline" as const,
+                  speed: 0,
+                  lat: -14.235004 + (Math.random() - 0.5) * 20,
+                  lng: -51.92528 + (Math.random() - 0.5) * 20,
+                  address: "Localização sendo adquirida...",
+                  lastUpdate: "Agora",
+                  history: {},
+                },
+              ])
+              setModalContent(null)
+
+              setTimeout(() => {
+                setModalContent(
+                  <div className="text-center">
+                    <div className="w-12 h-12 text-green-500 mx-auto mb-4">✓</div>
+                    <h3 className="text-xl font-bold text-white mb-2">Sucesso!</h3>
+                    <p className="text-gray-300 mb-6">Veículo "{data.vehicle.name}" cadastrado na plataforma.</p>
+                    <Button
+                      onClick={() => setModalContent(null)}
+                      className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
+                    >
+                      OK
+                    </Button>
+                  </div>,
+                )
+              }, 400)
+            } else {
+              const errorData = await response.json()
+              throw new Error(errorData.error)
+            }
+          } catch (error) {
+            console.error("Erro ao criar veículo:", error)
             setModalContent(
               <div className="text-center">
-                <div className="w-12 h-12 text-green-500 mx-auto mb-4">✓</div>
-                <h3 className="text-xl font-bold text-white mb-2">Sucesso!</h3>
-                <p className="text-gray-300 mb-6">Veículo "{newVehicle.name}" cadastrado na plataforma.</p>
+                <h3 className="text-xl font-bold text-red-500 mb-2">Erro</h3>
+                <p className="text-gray-300 mb-6">Erro ao cadastrar veículo. Tente novamente.</p>
                 <Button
                   onClick={() => setModalContent(null)}
                   className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
@@ -206,7 +264,7 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
                 </Button>
               </div>,
             )
-          }, 400)
+          }
         }}
       >
         <h3 className="text-xl font-bold text-amber-500 mb-4">Cadastrar Novo GPS</h3>
@@ -264,18 +322,6 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Selecione o Veículo</label>
-              <Select>
-                <SelectTrigger className="bg-gray-700 border-gray-600">
-                  <SelectValue placeholder="-- Escolha um veículo --" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicles.map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                      {vehicle.name} - {vehicle.plate}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Selecione o Período</label>
@@ -479,18 +525,30 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
         </Button>
 
         {/* Map Controls */}
-        <div className="absolute top-4 right-4 z-20 bg-gray-900 p-1 rounded-lg shadow-lg">
-          <Select value={mapLayer} onValueChange={setMapLayer}>
-            <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:ring-amber-500 focus:border-amber-500 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="osm_dark">OpenStreetMap (Escuro)</SelectItem>
-              <SelectItem value="osm_light">OpenStreetMap (Claro)</SelectItem>
-              <SelectItem value="google_roadmap">Google Maps</SelectItem>
-              <SelectItem value="google_satellite">Google Satélite</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="absolute top-4 right-4 z-20">
+          <select
+            value={mapLayer}
+            onChange={(e) => setMapLayer(e.target.value)}
+            className="bg-gray-800 border border-gray-600 text-white focus:ring-amber-500 focus:border-amber-500 text-sm rounded-md p-2 min-w-[200px]"
+            style={{
+              backgroundColor: "#1f2937",
+              color: "white",
+              border: "1px solid #4b5563",
+            }}
+          >
+            <option value="osm_dark" style={{ backgroundColor: "#1f2937", color: "white" }}>
+              OpenStreetMap (Escuro)
+            </option>
+            <option value="osm_light" style={{ backgroundColor: "#1f2937", color: "white" }}>
+              OpenStreetMap (Claro)
+            </option>
+            <option value="google_roadmap" style={{ backgroundColor: "#1f2937", color: "white" }}>
+              Google Maps
+            </option>
+            <option value="google_satellite" style={{ backgroundColor: "#1f2937", color: "white" }}>
+              Google Satélite
+            </option>
+          </select>
         </div>
       </main>
 

@@ -17,13 +17,30 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
   const [password, setPassword] = useState("senha123")
   const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (email === "cliente@rastreramos.com" && password === "senha123") {
-      setError("")
-      onLogin("client")
-    } else {
-      setError("Email ou senha inválidos.")
+    setError("")
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Salvar dados do usuário no localStorage ou context
+        localStorage.setItem("user", JSON.stringify(data.user))
+        onLogin(data.user.userType as "guest" | "client")
+      } else {
+        setError(data.error || "Erro ao fazer login")
+      }
+    } catch (error) {
+      setError("Erro de conexão. Tente novamente.")
     }
   }
 
