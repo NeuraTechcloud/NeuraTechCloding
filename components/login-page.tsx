@@ -39,23 +39,23 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
       console.log("📋 Response data:", data)
 
       if (response.ok && data.success) {
-        console.log("✅ Login successful, user type:", data.user.user_type)
+        console.log("✅ Login bem-sucedido, tipo de usuário:", data.user.user_type)
+        // Armazenar os dados do usuário e o token
         localStorage.setItem("user", JSON.stringify(data.user))
-
-        // Redirecionar baseado no tipo de usuário
+        
         if (data.user.user_type === "admin") {
-          console.log("👨‍💼 Redirecting admin to /admin")
+          console.log("👨‍💼 Redirecionando admin para /admin")
           window.location.href = "/admin"
         } else {
-          console.log("👤 Calling onLogin for client")
+          console.log("👤 Chamando onLogin para cliente")
           onLogin("client")
         }
       } else {
-        console.log("❌ Login failed:", data.error)
+        console.log("❌ Falha no login:", data.error)
         setError(data.error || "Credenciais inválidas")
       }
     } catch (error) {
-      console.error("❌ Network error:", error)
+      console.error("❌ Erro de rede:", error)
       setError("Erro de conexão. Tente novamente.")
     } finally {
       setLoading(false)
@@ -63,7 +63,7 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
   }
 
   const handleGuestLogin = () => {
-    console.log("👥 Guest login")
+    console.log("👥 Login de convidado")
     setError("")
     onLogin("guest")
   }
@@ -74,6 +74,7 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
     setError("")
   }
 
+  // O restante do JSX do componente permanece o mesmo.
   return (
     <div className="flex items-center justify-center h-screen bg-black">
       <div className="w-full max-w-md p-8 space-y-6 bg-gray-900 rounded-2xl shadow-xl mx-4">
@@ -155,7 +156,6 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
           Voltar para a página inicial
         </Button>
 
-        {/* Botão de teste apenas para cliente */}
         <div className="space-y-2">
           <p className="text-xs text-gray-400 text-center">Acesso de teste:</p>
           <Button
@@ -168,7 +168,6 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
           </Button>
         </div>
 
-        {/* Credenciais para referência */}
         <div className="text-xs text-gray-500 bg-gray-800 p-3 rounded">
           <p className="font-medium text-gray-400 mb-2">Credenciais disponíveis:</p>
           <div className="space-y-1">
@@ -176,7 +175,7 @@ export default function LoginPage({ onLogin, onBackToHome }: LoginPageProps) {
               <strong>Cliente Teste:</strong> cliente@rastreramos.com / senha123
             </p>
             <p>
-              <strong>Administrador:</strong> Acesso restrito via banco de dados
+              <strong>Administrador:</strong> admin@rastreramos.com / admin123
             </p>
           </div>
         </div>
