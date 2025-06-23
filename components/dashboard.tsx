@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import MapComponent from "@/components/map-component"
 import Modal from "@/components/modal"
+import UserSettingsModal from "@/components/user-settings-modal"
 
 interface Vehicle {
   id: number
@@ -74,6 +75,7 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
   const [mapLayer, setMapLayer] = useState("osm_dark")
   const [modalContent, setModalContent] = useState<React.ReactNode | null>(null)
   const simulationInterval = useRef<NodeJS.Timeout | null>(null)
+  const [showUserSettings, setShowUserSettings] = useState(false)
 
   useEffect(() => {
     const loadVehicles = async () => {
@@ -282,7 +284,12 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
             <p className="text-xs text-gray-400">Monitoramento em tempo real</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button size="sm" variant="ghost" className="p-2 text-gray-400 hover:bg-gray-800 hover:text-white">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowUserSettings(true)}
+              className="p-2 text-gray-400 hover:bg-gray-800 hover:text-white"
+            >
               <Settings className="h-5 w-5" />
             </Button>
             <Button
@@ -428,6 +435,15 @@ export default function Dashboard({ userType, onLogout }: DashboardProps) {
           onClick={() => setPanelOpen(false)}
           style={{ zIndex: 400 }}
         />
+      )}
+
+      {/* User Settings Modal */}
+      {showUserSettings && (
+        <div className="modal-overlay">
+          <Modal onClose={() => setShowUserSettings(false)}>
+            <UserSettingsModal onClose={() => setShowUserSettings(false)} />
+          </Modal>
+        </div>
       )}
 
       {/* Modal */}
